@@ -1,0 +1,12 @@
+# dependencies (bun install)
+node_modules
+
+# output
+dist
+
+# bun
+bun.lock
+
+# bun env
+.env
+

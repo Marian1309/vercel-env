@@ -1,0 +1,42 @@
+{
+  "name": "@pidchashyi/bun",
+  "version": "1.0.0",
+  "description": "Bun",
+  "keywords": [],
+  "homepage": "https://github.com/Marian1309/npm-bun-base#readme",
+  "bugs": {
+    "url": "https://github.com/Marian1309/npm-bun-base/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Marian1309/npm-bun-base.git"
+  },
+  "license": "MIT",
+  "author": "Marian Pidchashyi",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "bun run build",
+    "postpublish": "rimraf -rf dist"
+  },
+  "dependencies": {
+    "@pidchashyi/try-catch": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "typescript": "^5.0.0"
+  }
+}
