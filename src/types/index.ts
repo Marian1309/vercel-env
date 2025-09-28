@@ -15,7 +15,7 @@ export type DeleteChoice = {
 }
 
 export type EnvVars = Record<string, string>;
-export type SyncAction = "add" | "update" | "delete" | "pull" | "remove_from_vercel";
+export type SyncAction = "add" | "update" | "delete" | "pull" | "remove_from_vercel" | "remove_from_local";
 
 export type EnvDiff = {
   action: SyncAction;

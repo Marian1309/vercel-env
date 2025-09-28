@@ -157,9 +157,19 @@ const calculateDiffs = (
     const hasVercel = vercelValue !== undefined && vercelValue !== "";
 
     if (hasLocal && !hasVercel) {
-      // Local has it, Vercel doesn't - ADD to Vercel
+      // Local has it, Vercel doesn't - provide multiple options
+      
+      // Option 1: Add to Vercel
       diffs.push({
         action: "add",
+        key,
+        localValue,
+        environment
+      });
+
+      // Option 2: Remove from local
+      diffs.push({
+        action: "remove_from_local",
         key,
         localValue,
         environment
@@ -225,6 +235,8 @@ const formatDiffDescription = (diff: EnvDiff): string => {
         return "⬇️ ";
       case "remove_from_vercel":
         return "🗑️ ";
+      case "remove_from_local":
+        return "🗑️ ";
       case "delete":
         return "❌ ";
       default:
@@ -258,6 +270,13 @@ const formatDiffDescription = (diff: EnvDiff): string => {
     if (vercelValue && vercelValue !== "[ENCRYPTED]") {
       description += `\n     Current Value: "${truncateValue(vercelValue)}"`;
     }
+  } else if (action === "remove_from_local") {
+    // Removing variable from local file
+    description += ` 🗑️ Local (${ENV_CONFIG[environment].localFile})`;
+    description += `\n     Will DELETE this variable from local file`;
+    if (localValue) {
+      description += `\n     Current Value: "${truncateValue(localValue)}"`;
+    }
   } else if (action === "update" && localValue && vercelValue) {
     // Updating existing variable
     description += ` → Vercel (${environment}) [UPDATE]`;
@@ -273,7 +292,7 @@ const formatDiffDescription = (diff: EnvDiff): string => {
   return description;
 };
 
-const selectDiffsToApply = async (diffs: EnvDiff[]): Promise<EnvDiff[]> => {
+const selectDiffsToApply = async (diffs: EnvDiff[]): Promise<EnvDiff[] | null> => {
   if (diffs.length === 0) return [];
 
   const choices: SyncChoice[] = diffs.map((diff) => ({
@@ -281,6 +300,16 @@ const selectDiffsToApply = async (diffs: EnvDiff[]): Promise<EnvDiff[]> => {
     value: diff,
     checked: true // Default to all selected
   }));
+
+  // Add separator and "Do Nothing" option
+  choices.push(
+    { name: "────────────────────────────────────────", value: null as any, checked: false },
+    { 
+      name: "❌ Do Nothing - Exit without making any changes", 
+      value: { action: "exit" } as any, 
+      checked: false 
+    }
+  );
 
   const answers = await inquirer.prompt([
     {
@@ -292,15 +321,32 @@ const selectDiffsToApply = async (diffs: EnvDiff[]): Promise<EnvDiff[]> => {
       pageSize: 15,
       loop: false,
       validate: (input) => {
-        if (input.length === 0) {
-          return "Please select at least one variable to sync, or press Ctrl+C to cancel.";
-        }
+        // Allow empty selection or exit option
         return true;
       }
     }
   ]);
 
-  return answers.selectedDiffs as EnvDiff[];
+  const selectedDiffs = answers.selectedDiffs as EnvDiff[];
+  
+  // Check if user selected "Do Nothing" option
+  const exitSelected = selectedDiffs.some((diff: any) => diff?.action === "exit");
+  if (exitSelected) {
+    console.log("👋 Exiting without making any changes...");
+    return null; // Return null to indicate exit
+  }
+
+  // Filter out separator and exit options, keep only real diffs
+  const realDiffs = selectedDiffs.filter((diff: any) => 
+    diff && diff.action !== "exit" && typeof diff.action === "string" && diff.key
+  );
+
+  if (realDiffs.length === 0) {
+    console.log("ℹ️  No variables selected for sync.");
+    return [];
+  }
+
+  return realDiffs;
 };
 
 const confirmEnvironmentSync = async (
@@ -387,6 +433,8 @@ const confirmIndividualChange = async (diff: EnvDiff): Promise<boolean> => {
         return "⬇️";
       case "remove_from_vercel":
         return "🗑️";
+      case "remove_from_local":
+        return "🗑️";
       case "delete":
         return "❌";
       default:
@@ -402,7 +450,7 @@ const confirmIndividualChange = async (diff: EnvDiff): Promise<boolean> => {
       type: "confirm",
       name: "proceed",
       message: `${envIcon} ${actionIcon} Apply ${actionText} for ${key} in ${environment}?`,
-      default: action !== "remove_from_vercel" // Default to false for destructive actions
+      default: action !== "remove_from_vercel" && action !== "remove_from_local" // Default to false for destructive actions
     }
   ]);
 
@@ -509,6 +557,19 @@ const applyDiff = async (
       return true;
     } else {
       console.error(`❌ Failed to remove ${key} from Vercel ${vercelEnv}`);
+      return false;
+    }
+  } else if (action === "remove_from_local") {
+    // Remove variable from local file
+    console.log(`\n🗑️  Removing ${key} from ${localFile}...`);
+    try {
+      const localVars = getLocalEnvVars(environment);
+      delete localVars[key];
+      writeEnvFile(localFile, localVars);
+      console.log(`✅ Removed ${key} from ${localFile}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to remove ${key} from ${localFile}:`, error);
       return false;
     }
   } else if (action === "update" && localValue) {
@@ -624,7 +685,15 @@ const syncEnvironment = async (
 
   if (mode === "interactive") {
     // Let user select which diffs to apply
-    selectedDiffs = await selectDiffsToApply(diffs);
+    const result = await selectDiffsToApply(diffs);
+    
+    // Check if user chose to exit
+    if (result === null) {
+      console.log(`👋 Exited ${environment} sync without making changes`);
+      return;
+    }
+    
+    selectedDiffs = result;
   } else {
     // Auto mode - confirm all changes
     const proceedAll = await confirmEnvironmentSync(environment, diffs.length);
