@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import inquirer from "inquirer";
-import type { Environment, EnvVariable, DeleteChoice, DeleteEnvsOptions } from './types.js';
+import type { Environment, EnvVariable, DeleteChoice, DeleteEnvsOptions } from '../types';
 
 const run = (command: string, suppressError = false): string | null => {
   try {
