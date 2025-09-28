@@ -1,6 +1,6 @@
 # @pidchashyi/vercel-env
 
-A comprehensive library and CLI tool for syncing environment variables between local files and Vercel. This tool provides both programmatic access through named modules (`deleteEnvs` and `syncEnvs`) and a convenient CLI interface.
+A comprehensive library and CLI tool for syncing environment variables between local files and Vercel. This tool provides both programmatic access through named modules (`deleteEnvs` and `syncEnvs`) and a modern, interactive CLI interface powered by @clack/prompts.
 
 ## 📖 What is this?
 
@@ -15,10 +15,11 @@ A comprehensive library and CLI tool for syncing environment variables between l
 
 ### 💡 **The Solution:**
 - **Bidirectional sync**: Automatically sync between local files (`.env.local`, `.env.prod`) and Vercel environments
-- **Interactive interface**: Choose exactly what to sync, update, add, or delete
-- **Safety first**: Multiple confirmation prompts and smart exclusion lists
+- **Modern interactive interface**: Beautiful CLI powered by @clack/prompts with individual action selection
+- **Safety first**: Multiple confirmation prompts, smart exclusion lists, and system variable filtering
 - **Developer-friendly**: Both CLI commands and TypeScript library for automation
-- **Smart detection**: Automatically detects differences and suggests actions
+- **Smart detection**: Automatically detects differences and suggests specific actions
+- **Flexible workflows**: Choose individual actions per variable or batch operations
 
 ### 🔧 **How It Works:**
 1. **Connects** to your Vercel project using the official Vercel CLI
@@ -38,13 +39,14 @@ A comprehensive library and CLI tool for syncing environment variables between l
 ## 🚀 Features
 
 - **Two-way sync** between local `.env` files and Vercel environments
-- **Interactive deletion** of environment variables with safety checks
-- **CLI interface** with `--sync` and `--delete` flags
-- **Library modules** for programmatic usage
-- **TypeScript support** with full type definitions
+- **Individual action selection** - choose specific actions per variable (add, update, pull, delete)
+- **Interactive deletion** with local file cleanup options and safety checks
+- **Modern CLI interface** powered by @clack/prompts with beautiful, intuitive prompts
+- **Smart system variable filtering** - automatically excludes Vercel system variables
+- **Library modules** for programmatic usage with full TypeScript support
 - **Environment-specific** operations (development/production)
-- **Safety features** including confirmation prompts and exclusion lists
-- **Flexible configuration** with multiple sync modes
+- **Multiple confirmation levels** with retry options and graceful cancellation
+- **Flexible sync modes** - interactive (per-variable) or auto (batch) modes
 
 ## 📋 Prerequisites
 
@@ -110,6 +112,8 @@ yarn add @pidchashyi/vercel-env
 bun add @pidchashyi/vercel-env
 ```
 
+> **Note**: The library now uses `@clack/prompts` instead of `inquirer` for a modern, beautiful CLI experience.
+
 ## 🏃‍♂️ CLI Usage
 
 ### Sync environments
@@ -144,7 +148,11 @@ npx @pidchashyi/vercel-env --delete --dev # Delete from development
 npx @pidchashyi/vercel-env --delete --prod # Delete from production
 ```
 
-> 💡 **Tip**: In interactive mode, you'll see a "❌ Do Nothing - Exit" option that lets you exit safely without making any changes!
+> 💡 **New Features**: 
+> - **Exit option**: "❌ Exit - Cancel deletion and exit" option for safe cancellation
+> - **Local cleanup**: Option to also delete variables from local files (.env.local, .env.prod)
+> - **Retry on "No"**: If you decline a deletion, you can go back and choose different actions
+> - **System variable filtering**: Automatically excludes Vercel system variables from deletion
 
 ## 📚 Library Usage
 
@@ -176,14 +184,14 @@ You can also run the individual module files directly:
 
 ```bash
 # Run sync module directly
-bun node_modules/@pidchashyi/vercel-env/src/sync.ts
+bun node_modules/@pidchashyi/vercel-env/src/actions/sync.ts
 
 # Run delete module directly  
-bun node_modules/@pidchashyi/vercel-env/src/delete-all.ts
+bun node_modules/@pidchashyi/vercel-env/src/actions/delete.ts
 
 # Or if installed globally
-bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env/src/sync.ts
-bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env/src/delete-all.ts
+bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env/src/actions/sync.ts
+bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env/src/actions/delete.ts
 ```
 
 ### 3. Local Development (if you have the source)
@@ -194,14 +202,14 @@ git clone <repository-url>
 cd vercel-env
 
 # Run sync module
-bun src/sync.ts
+bun src/actions/sync.ts
 
 # Run delete module  
-bun src/delete-all.ts
+bun src/actions/delete.ts
 
 # With command line arguments
-bun src/sync.ts --dev --auto
-bun src/delete-all.ts --interactive
+bun src/actions/sync.ts --dev --auto
+bun src/actions/delete.ts --interactive
 ```
 
 ### 4. Using NPM Scripts (after installation)
@@ -229,32 +237,38 @@ The library works with the following local files:
 
 ### Excluded Variables
 
-Some variables are automatically excluded from being pulled from Vercel to local files:
+System variables are automatically excluded from sync and deletion operations to prevent accidental removal of critical Vercel functionality:
 
 **All environments:**
-- `VERCEL_OIDC_TOKEN`
-- `VERCEL_URL`
-- `VERCEL_ENV`
-- `VERCEL_REGION`
+- `VERCEL_OIDC_TOKEN` - System-generated OIDC token
+- `VERCEL_URL` - Vercel system variable
+- `VERCEL_ENV` - Vercel system variable  
+- `VERCEL_REGION` - Vercel system variable
 
 **Production only:**
-- `NX_DAEMON`
-- `TURBO_CACHE`
-- `TURBO_DOWNLOAD_LOCAL_ENABLED`
-- `TURBO_REMOTE_ONLY`
-- `TURBO_RUN_SUMMARY`
-- `VERCEL`
-- `VERCEL_TARGET_ENV`
+- `NX_DAEMON` - NX build system variable
+- `TURBO_CACHE` - Turborepo cache variable
+- `TURBO_DOWNLOAD_LOCAL_ENABLED` - Turborepo download setting
+- `TURBO_REMOTE_ONLY` - Turborepo remote-only setting
+- `TURBO_RUN_SUMMARY` - Turborepo run summary setting
+- `VERCEL` - Vercel system flag
+- `VERCEL_TARGET_ENV` - Vercel target environment
+
+> **Note**: These exclusions apply to both sync operations (preventing pull from Vercel) and deletion operations (preventing accidental system variable removal).
 
 ## 📦 Project Structure
 
 ```
 src/
-├── cli.ts          # CLI interface
-├── delete-all.ts   # deleteEnvs module
-├── sync.ts         # syncEnvs module
-├── types.ts        # TypeScript type definitions
-└── index.ts        # Main library exports
+├── actions/
+│   ├── delete.ts   # deleteEnvs module with @clack/prompts
+│   └── sync.ts     # syncEnvs module with @clack/prompts
+├── constants/
+│   └── index.ts    # Configuration constants and exclusion lists
+├── types/
+│   └── index.ts    # TypeScript type definitions
+├── cli.ts          # Main CLI interface
+└── index.ts        # Library exports
 ```
 
 ## 🔄 How it works
@@ -263,44 +277,82 @@ src/
 
 1. **Fetch** environment variables from both local files and Vercel
 2. **Compare** values and identify differences
-3. **Present options** for each difference (add, update, pull, or delete)
-4. **Apply changes** based on user selection or auto mode
-5. **Report** success/failure for each operation
+3. **Present individual choices** for each variable conflict (add, update, pull, remove, or do nothing)
+4. **Confirm each action** with descriptive prompts (e.g., "Add 'API_KEY' to Vercel development environment?")
+5. **Retry on decline** - if you say "No", you can choose a different action
+6. **Apply changes** and report success/failure for each operation
 
 ### Delete Process
 
-1. **Fetch** environment variables from selected Vercel environments
-2. **Display** variables with their values (when possible)
-3. **Allow selection** of variables to delete
-4. **Confirm** deletion with safety prompts
-5. **Execute** deletions and report results
+1. **Fetch** environment variables from selected Vercel environments (excluding system variables)
+2. **Display** variables with their values and environments
+3. **Allow selection** of variables to delete with "Exit" option at the top
+4. **Show selected variables** in confirmation prompt for review
+5. **Ask about local cleanup** - option to also delete from .env.local/.env.prod files
+6. **Retry on decline** - if you say "No" to deletion, you can go back and select different variables
+7. **Execute** deletions from Vercel and optionally local files, then report results
 
 ## 🎮 Interactive Features
 
-### Smart Exit Option
+### Modern CLI Experience
 
-When using **interactive sync mode**, you'll see a convenient "Do Nothing" option that allows you to exit gracefully without making any changes:
+The tool now uses **@clack/prompts** for a beautiful, modern CLI experience:
+
+#### Sync Mode - Individual Action Selection
+
+For each environment variable conflict, you get a dedicated prompt:
 
 ```
-🔄 Select environment variables to sync:
-◉ ➕ ADD DATABASE_URL → Vercel (development)
-◉ 🔄 UPDATE API_KEY → Vercel (development) 
-◉ ⬇️ PULL SECRET_TOKEN ← Vercel (development)
-────────────────────────────────────────
-◯ ❌ Do Nothing - Exit without making any changes
+🔧 Choose action for variable "DATABASE_URL" (development):
+│  ● ➕ Add to Vercel - "postgresql://localhost:5432/mydb"
+│  ○ 🗑️ Remove from Local - Will delete from .env.local
+│  ○ ⏭️ Do nothing with DATABASE_URL
 ```
 
-**Benefits:**
-- **Safe exit**: No need to press Ctrl+C or force quit
-- **Clear separation**: Visual separator between real options and exit option
-- **Graceful handling**: Shows friendly message when exiting
-- **No changes**: Guaranteed to leave both local files and Vercel untouched
+Then confirmation with clear context:
+```
+🔧 ➕ Add "DATABASE_URL" to Vercel development environment?
+│  ○ Yes / ● No
+```
 
-**Usage:**
-- Use ↑↓ arrows to navigate
-- Press `Space` to select/deselect the "Do Nothing" option
-- Press `Enter` to confirm your choice
-- If "Do Nothing" is selected, the sync exits immediately with a friendly message
+**If you choose "No"**: You go back to the action selection - no need to start over!
+
+#### Delete Mode - Enhanced Safety
+
+**Variable Selection** with exit option at the top:
+```
+🗑️ Select environment variables to DELETE:
+│  ◯ ❌ Exit - Cancel deletion and exit
+│  ◯ 🔧 API_KEY (development)
+│  ◯ 🚀 SECRET_TOKEN (production)
+│  ◯ 🔧🚀 DATABASE_URL (development, production)
+```
+
+**Confirmation** shows exactly what will be deleted:
+```
+Are you absolutely sure you want to delete these variables?
+
+1. 🔧 API_KEY (development)
+2. 🚀 SECRET_TOKEN (production)
+
+🚨 THIS ACTION CANNOT BE UNDONE! 🚨
+│  ○ Yes / ● No
+```
+
+**Local Cleanup Option**:
+```
+Also delete these variables from local environment files (.env.local, .env.prod)?
+│  ○ Yes / ● No
+```
+
+### Key Benefits
+
+- **Individual control**: Choose specific actions per variable
+- **Retry-friendly**: Declining an action lets you choose differently
+- **Clear context**: Descriptive prompts show exactly what will happen
+- **Safe defaults**: Destructive actions default to "No"
+- **System protection**: Automatically filters out Vercel system variables
+- **Graceful cancellation**: Multiple exit points with friendly messages
 
 ## 🤝 Contributing
 
@@ -312,5 +364,6 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 👏 Acknowledgments
 
-- [Vercel](https://vercel.com) - For providing excellent deployment platform
-- [Inquirer.js](https://github.com/SBoudrias/Inquirer.js) - For interactive CLI prompts
+- [Vercel](https://vercel.com) - For providing excellent deployment platform and CLI tools
+- [@clack/prompts](https://github.com/natemoo-re/clack) - For beautiful, modern CLI prompts
+- [TypeScript](https://www.typescriptlang.org) - For excellent type safety and developer experience

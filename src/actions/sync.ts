@@ -2,8 +2,9 @@ import { execSync } from "child_process";
 import fs from "fs";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import inquirer from "inquirer";
-import type { Environment, EnvVars, SyncAction, EnvDiff, SyncChoice, SyncEnvsOptions } from '../types';
+import * as p from '@clack/prompts';
+import { isCancel, cancel } from '@clack/prompts';
+import type { Environment, EnvVars, SyncAction, EnvDiff, SyncEnvsOptions } from '../types';
 import { ENV_CONFIG, EXCLUDED_FROM_PULL } from '../constants';
 
 // Helper function to check if a variable should be excluded from pull
@@ -223,69 +224,49 @@ const calculateDiffs = (
 
 const formatDiffDescription = (diff: EnvDiff): string => {
   const { action, key, localValue, vercelValue, environment } = diff;
-  const envIcon = environment === "development" ? "🔧" : "🚀";
 
-  const getActionIcon = (action: SyncAction) => {
+  const getActionInfo = (action: SyncAction) => {
     switch (action) {
       case "add":
-        return "➕ ";
+        return { icon: "➕", text: "Add to Vercel with value", color: "green" };
       case "update":
-        return "🔄 ";
+        return { icon: "🔄", text: "Update Vercel", color: "blue" };
       case "pull":
-        return "⬇️ ";
+        return { icon: "⬇️", text: "Pull from Vercel", color: "cyan" };
       case "remove_from_vercel":
-        return "🗑️ ";
+        return { icon: "🗑️", text: "Remove from Vercel", color: "red" };
       case "remove_from_local":
-        return "🗑️ ";
+        return { icon: "🗑️ ", text: "Remove from Local", color: "red" };
       case "delete":
-        return "❌ ";
+        return { icon: "❌", text: "Delete", color: "red" };
       default:
-        return "❓ ";
+        return { icon: "❓", text: "Unknown", color: "gray" };
     }
   };
 
-  const actionIcon = getActionIcon(action);
-  let description = `${envIcon} ${actionIcon} ${action.toUpperCase().replace("_", " ")} ${key}`;
-
-  const truncateValue = (value: string, maxLength = 500) => {
+  const actionInfo = getActionInfo(action);
+  const truncateValue = (value: string, maxLength = 40) => {
     return value.length > maxLength ? value.substring(0, maxLength - 3) + "..." : value;
   };
 
-  if (action === "add" && localValue && !vercelValue) {
-    // Adding new variable to Vercel
-    description += ` → Vercel (${environment})`;
-    description += `\n     Value: "${truncateValue(localValue)}"`;
+  let description = `${actionInfo.icon} ${actionInfo.text}`;
+
+  if (action === "add" && localValue) {
+    description += ` - "${truncateValue(localValue)}"`;
   } else if (action === "pull") {
-    // Pulling variable from Vercel to local
-    description += ` ← Vercel (${environment})`;
     if (vercelValue === "[ENCRYPTED]") {
-      description += `\n     Will pull encrypted value from Vercel to ${ENV_CONFIG[environment].localFile}`;
-    } else {
-      description += `\n     Value: "${truncateValue(vercelValue || "")}"`;
+      description += ` - [Encrypted value]`;
+    } else if (vercelValue) {
+      description += ` - "${truncateValue(vercelValue)}"`;
     }
   } else if (action === "remove_from_vercel") {
-    // Removing variable from Vercel
-    description += ` 🗑️ Vercel (${environment})`;
-    description += `\n     Will DELETE this variable from Vercel`;
-    if (vercelValue && vercelValue !== "[ENCRYPTED]") {
-      description += `\n     Current Value: "${truncateValue(vercelValue)}"`;
-    }
+    description += ` - Will delete from Vercel`;
   } else if (action === "remove_from_local") {
-    // Removing variable from local file
-    description += ` 🗑️ Local (${ENV_CONFIG[environment].localFile})`;
-    description += `\n     Will DELETE this variable from local file`;
-    if (localValue) {
-      description += `\n     Current Value: "${truncateValue(localValue)}"`;
-    }
-  } else if (action === "update" && localValue && vercelValue) {
-    // Updating existing variable
-    description += ` → Vercel (${environment}) [UPDATE]`;
-    if (vercelValue === "[ENCRYPTED]") {
-      description += `\n     Local: "${truncateValue(localValue)}"`;
-      description += `\n     Vercel: [ENCRYPTED - will be updated]`;
-    } else {
-      description += `\n     Local:  "${truncateValue(localValue)}"`;
-      description += `\n     Vercel: "${truncateValue(vercelValue)}"`;
+    description += ` - Will delete from ${ENV_CONFIG[environment].localFile}`;
+  } else if (action === "update" && localValue) {
+    description += ` - "${truncateValue(localValue)}"`;
+    if (vercelValue && vercelValue !== "[ENCRYPTED]") {
+      description += ` (was: "${truncateValue(vercelValue)}")`;
     }
   }
 
@@ -295,58 +276,83 @@ const formatDiffDescription = (diff: EnvDiff): string => {
 const selectDiffsToApply = async (diffs: EnvDiff[]): Promise<EnvDiff[] | null> => {
   if (diffs.length === 0) return [];
 
-  const choices: SyncChoice[] = diffs.map((diff) => ({
-    name: formatDiffDescription(diff),
-    value: diff,
-    checked: true // Default to all selected
-  }));
+  const selectedDiffs: EnvDiff[] = [];
 
-  // Add separator and "Do Nothing" option
-  choices.push(
-    { name: "────────────────────────────────────────", value: null as any, checked: false },
-    { 
-      name: "❌ Do Nothing - Exit without making any changes", 
-      value: { action: "exit" } as any, 
-      checked: false 
+  // Group diffs by variable name and environment
+  const diffsByVariable = new Map<string, EnvDiff[]>();
+  diffs.forEach(diff => {
+    const key = `${diff.key}_${diff.environment}`;
+    if (!diffsByVariable.has(key)) {
+      diffsByVariable.set(key, []);
     }
-  );
+    diffsByVariable.get(key)!.push(diff);
+  });
 
-  const answers = await inquirer.prompt([
-    {
-      type: "checkbox",
-      name: "selectedDiffs",
-      message:
-        "🔄 Select environment variables to sync (use ↑↓ arrows, space to select/deselect, enter to confirm):",
-      choices: choices,
-      pageSize: 15,
-      loop: false,
-      validate: (input) => {
-        // Allow empty selection or exit option
-        return true;
+  // For each variable, let user choose one action
+  for (const [variableKey, variableDiffs] of diffsByVariable) {
+    const [varName, env] = variableKey.split('_');
+    const envIcon = env === "development" ? "🔧" : "🚀";
+
+    let selectedDiff: EnvDiff | null = null;
+    
+    // Keep asking until user makes a final choice or cancels
+    while (selectedDiff === null) {
+      const options = variableDiffs.map((diff, index) => ({
+        label: formatDiffDescription(diff),
+        value: index
+      }));
+
+      // Add "Do nothing" option
+      options.push({
+        label: `⏭️  Do nothing with ${varName}`,
+        value: -1
+      });
+
+      const selectedIndex = await p.select({
+        message: `${envIcon} Choose action for variable "${varName}" (${env}):`,
+        options: options,
+        initialValue: 0 // Default to first option
+      });
+
+      if (isCancel(selectedIndex)) {
+        cancel("👋 Operation cancelled");
+        return null;
       }
-    }
-  ]);
 
-  const selectedDiffs = answers.selectedDiffs as EnvDiff[];
-  
-  // Check if user selected "Do Nothing" option
-  const exitSelected = selectedDiffs.some((diff: any) => diff?.action === "exit");
-  if (exitSelected) {
-    console.log("👋 Exiting without making any changes...");
-    return null; // Return null to indicate exit
+      // If user chose "do nothing", break the loop
+      if (selectedIndex === -1) {
+        break;
+      }
+
+      // Get the selected diff
+      const chosenDiff = variableDiffs[selectedIndex];
+      
+      // Ask for confirmation
+      const confirmed = await confirmIndividualChange(chosenDiff);
+      
+      if (isCancel(confirmed)) {
+        cancel("👋 Operation cancelled");
+        return null;
+      }
+
+      if (confirmed) {
+        selectedDiff = chosenDiff;
+      }
+      // If not confirmed, the loop continues and asks again
+    }
+
+    // Add the selected diff if any
+    if (selectedDiff) {
+      selectedDiffs.push(selectedDiff);
+    }
   }
 
-  // Filter out separator and exit options, keep only real diffs
-  const realDiffs = selectedDiffs.filter((diff: any) => 
-    diff && diff.action !== "exit" && typeof diff.action === "string" && diff.key
-  );
-
-  if (realDiffs.length === 0) {
-    console.log("ℹ️  No variables selected for sync.");
+  if (selectedDiffs.length === 0) {
+    console.log("ℹ️  No actions selected for sync.");
     return [];
   }
 
-  return realDiffs;
+  return selectedDiffs;
 };
 
 const confirmEnvironmentSync = async (
@@ -354,107 +360,112 @@ const confirmEnvironmentSync = async (
   diffsCount: number
 ): Promise<boolean> => {
   const envIcon = environment === "development" ? "🔧" : "🚀";
-  const answer = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "proceed",
-      message: `${envIcon} Proceed with syncing ${diffsCount} variables in ${environment} environment?`,
-      default: true
-    }
-  ]);
+  
+  const proceed = await p.confirm({
+    message: `${envIcon} Proceed with syncing ${diffsCount} variables in ${environment} environment?`,
+    initialValue: true
+  });
 
-  return answer.proceed;
+  if (isCancel(proceed)) {
+    cancel("👋 Operation cancelled");
+    return false;
+  }
+
+  return proceed;
 };
 
 const selectSyncMode = async (): Promise<"interactive" | "auto"> => {
-  const answer = await inquirer.prompt([
-    {
-      type: "list",
-      name: "mode",
-      message: "🎯 Select sync mode:",
-      choices: [
-        {
-          name: "🎮 Interactive Mode - Review and select each change individually",
-          value: "interactive"
-        },
-        {
-          name: "⚡ Auto Mode - Apply all changes automatically (with confirmation)",
-          value: "auto"
-        }
-      ],
-      default: "interactive"
-    }
-  ]);
+  const mode = await p.select({
+    message: "🎯 Select sync mode:",
+    options: [
+      {
+        label: "🎮 Interactive Mode",
+        value: "interactive" as const,
+        hint: "Review and select each change individually"
+      },
+      {
+        label: "⚡ Auto Mode", 
+        value: "auto" as const,
+        hint: "Apply all changes automatically (with confirmation)"
+      }
+    ],
+    initialValue: "interactive"
+  });
 
-  return answer.mode;
+  if (isCancel(mode)) {
+    cancel("👋 Operation cancelled");
+    process.exit(0);
+  }
+
+  return mode as "interactive" | "auto";
 };
 
 const selectEnvironments = async (): Promise<Environment[]> => {
-  const answer = await inquirer.prompt([
-    {
-      type: "checkbox",
-      name: "environments",
-      message: "🌍 Select environments to sync:",
-      choices: [
-        {
-          name: "🔧 Development (.env.local ↔ Vercel development)",
-          value: "development" as Environment,
-          checked: true
-        },
-        {
-          name: "🚀 Production (.env.prod ↔ Vercel production)",
-          value: "production" as Environment,
-          checked: true
-        }
-      ],
-      validate: (input) => {
-        if (input.length === 0) {
-          return "Please select at least one environment to sync.";
-        }
-        return true;
+  const environments = await p.multiselect<any[], any>({
+    message: "🌍 Select environments to sync:",
+    options: [
+      {
+        label: "🔧 Development",
+        value: "development" as Environment,
+        hint: ".env.local ↔ Vercel development"
+      },
+      {
+        label: "🚀 Production",
+        value: "production" as Environment,
+        hint: ".env.prod ↔ Vercel production"
       }
-    }
-  ]);
+    ],
+    initialValues: ["development", "production"],
+    required: true
+  });
 
-  return answer.environments;
+  if (isCancel(environments)) {
+    cancel("👋 Operation cancelled");
+    process.exit(0);
+  }
+
+  if (environments.length === 0) {
+    p.log.error("Please select at least one environment to sync.");
+    return await selectEnvironments();
+  }
+
+  return environments as Environment[];
 };
 
 const confirmIndividualChange = async (diff: EnvDiff): Promise<boolean> => {
-  const { action, key, environment } = diff;
+  const { action, key, environment, localValue, vercelValue } = diff;
   const envIcon = environment === "development" ? "🔧" : "🚀";
 
-  const getActionIcon = (action: SyncAction) => {
+  const getConfirmationMessage = (action: SyncAction, key: string, environment: Environment) => {
     switch (action) {
       case "add":
-        return "➕";
+        return `${envIcon} ➕ Add "${key}" to Vercel ${environment} environment?`;
       case "update":
-        return "🔄";
+        return `${envIcon} 🔄 Update "${key}" in Vercel ${environment} environment?`;
       case "pull":
-        return "⬇️";
+        return `${envIcon} ⬇️ Pull "${key}" from Vercel to local ${ENV_CONFIG[environment].localFile}?`;
       case "remove_from_vercel":
-        return "🗑️";
+        return `${envIcon} 🗑️  Remove "${key}" from Vercel ${environment} environment?`;
       case "remove_from_local":
-        return "🗑️";
+        return `${envIcon} 🗑️  Remove "${key}" from local ${ENV_CONFIG[environment].localFile}?`;
       case "delete":
-        return "❌";
+        return `${envIcon} ❌ Delete "${key}" from ${environment}?`;
       default:
-        return "❓";
+        return `${envIcon} ❓ Apply unknown action for "${key}" in ${environment}?`;
     }
   };
 
-  const actionIcon = getActionIcon(action);
-  const actionText = action.replace("_", " ");
+  const proceed = await p.confirm({
+    message: getConfirmationMessage(action, key, environment),
+    initialValue: action !== "remove_from_vercel" && action !== "remove_from_local" // Default to false for destructive actions
+  });
 
-  const answer = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "proceed",
-      message: `${envIcon} ${actionIcon} Apply ${actionText} for ${key} in ${environment}?`,
-      default: action !== "remove_from_vercel" && action !== "remove_from_local" // Default to false for destructive actions
-    }
-  ]);
+  if (isCancel(proceed)) {
+    cancel("👋 Operation cancelled");
+    return false;
+  }
 
-  return answer.proceed;
+  return proceed;
 };
 
 const applyDiff = async (
@@ -464,15 +475,6 @@ const applyDiff = async (
   const { action, key, localValue, vercelValue, environment } = diff;
   const vercelEnv = ENV_CONFIG[environment].vercelEnv;
   const localFile = ENV_CONFIG[environment].localFile;
-
-  // In interactive mode, ask for individual confirmation
-  if (mode === "interactive") {
-    const confirmed = await confirmIndividualChange(diff);
-    if (!confirmed) {
-      console.log(`⏭️  Skipped ${action} for ${key}`);
-      return false;
-    }
-  }
 
   if (action === "add") {
     if (localValue) {
@@ -728,17 +730,23 @@ const syncEnvironment = async (
  * @param options - Configuration options for sync
  */
 export const syncEnvs = async (options: SyncEnvsOptions = {}): Promise<void> => {
-  console.log("🚀 Starting comprehensive environment sync...\n");
+  p.intro("🚀 Starting comprehensive environment sync");
+  
+  // Handle cancellation gracefully
+  process.on('SIGINT', () => {
+    cancel('👋 Operation cancelled');
+    process.exit(0);
+  });
 
   // Check if Vercel CLI is available
   const vercelCheck = run("bun vercel --version", undefined, true);
   if (!vercelCheck) {
-    console.error("❌ Vercel CLI not found. Please install it first:");
-    console.error("   npm i -g vercel");
+    p.log.error("❌ Vercel CLI not found. Please install it first:");
+    p.log.error("   npm i -g vercel");
     process.exit(1);
   }
 
-  console.log(`✅ Vercel CLI detected: ${vercelCheck.split("\n")[0]}\n`);
+  p.log.success(`✅ Vercel CLI detected: ${vercelCheck.split("\n")[0]}`);
 
   // Determine mode and environments from options
   let environments: Environment[] = [];
@@ -766,9 +774,9 @@ export const syncEnvs = async (options: SyncEnvsOptions = {}): Promise<void> => 
     }
   }
 
-  console.log(`\n🎯 Mode: ${mode === "interactive" ? "🎮 Interactive" : "⚡ Auto"}`);
-  console.log(
-    `🌍 Environments: ${environments.map((env) => (env === "development" ? "🔧 Development" : "🚀 Production")).join(", ")}\n`
+  p.log.info(`🎯 Mode: ${mode === "interactive" ? "🎮 Interactive" : "⚡ Auto"}`);
+  p.log.info(
+    `🌍 Environments: ${environments.map((env) => (env === "development" ? "🔧 Development" : "🚀 Production")).join(", ")}`
   );
 
   // Sync each environment
@@ -776,14 +784,13 @@ export const syncEnvs = async (options: SyncEnvsOptions = {}): Promise<void> => 
     try {
       await syncEnvironment(env, mode);
     } catch (error) {
-      console.error(
-        `💥 Error syncing ${env}:`,
-        error instanceof Error ? error.message : "Unknown error"
+      p.log.error(
+        `💥 Error syncing ${env}: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     }
   }
 
-  console.log("\n🎉 Environment sync completed!");
+  p.outro("🎉 Environment sync completed!");
 };
 
 // CLI wrapper for backwards compatibility

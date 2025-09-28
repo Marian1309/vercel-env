@@ -8,11 +8,6 @@ export type EnvVariable = {
   value?: string;
 }
 
-export type DeleteChoice = {
-  name: string;
-  value: EnvVariable;
-  checked: boolean;
-}
 
 export type EnvVars = Record<string, string>;
 export type SyncAction = "add" | "update" | "delete" | "pull" | "remove_from_vercel" | "remove_from_local";
@@ -27,9 +22,9 @@ export type EnvDiff = {
 }
 
 export type SyncChoice = {
-  name: string;
+  label: string;
   value: EnvDiff;
-  checked: boolean;
+  hint?: string;
 }
 
 export type DeleteEnvsOptions = {

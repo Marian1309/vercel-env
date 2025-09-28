@@ -1,4 +1,4 @@
-import { deleteEnvs } from './actions/delete-all.js';
+import { deleteEnvs } from './actions/delete.js';
 import { syncEnvs } from './actions/sync.js';
 import { Environment } from './types/index.js';
 

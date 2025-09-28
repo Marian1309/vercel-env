@@ -1,6 +1,6 @@
 {
   "name": "@pidchashyi/vercel-env",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "A comprehensive library and CLI tool for syncing environment variables between local files and Vercel",
   "keywords": [
     "vercel",
@@ -37,9 +37,9 @@
       "types": "./dist/sync.d.ts"
     },
     "./delete": {
-      "import": "./dist/delete-all.js",
-      "require": "./dist/delete-all.js",
-      "types": "./dist/delete-all.d.ts"
+      "import": "./dist/delete.js",
+      "require": "./dist/delete.js",
+      "types": "./dist/delete.d.ts"
     }
   },
   "main": "dist/index.js",
@@ -55,18 +55,18 @@
     "dev": "tsc --watch",
     "prepare": "bun run build",
     "postpublish": "rimraf -rf dist",
-    "sync": "bun src/sync.ts",
-    "delete": "bun src/delete-all.ts",
+    "sync": "bun src/actions/sync.ts",
+    "delete": "bun src/actions/delete.ts",
     "sync:dev": "bun src/sync.ts --dev --auto",
-    "sync:prod": "bun src/sync.ts --prod --interactive",
-    "delete:dev": "bun src/delete-all.ts --dev",
-    "delete:prod": "bun src/delete-all.ts --prod"
+    "sync:prod": "bun src/actions/sync.ts --prod --interactive",
+    "delete:dev": "bun src/actions/delete.ts --dev",
+    "delete:prod": "bun src/actions/delete.ts --prod"
   },
   "dependencies": {
-    "inquirer": "^12.9.6"
+    "@clack/prompts": "^0.7.0",
+    "vercel": "^48.1.6"
   },
   "devDependencies": {
-    "@types/inquirer": "^9.0.7",
     "@types/node": "^24.0.3",
     "rimraf": "^5.0.5",
     "typescript": "^5.0.0"
