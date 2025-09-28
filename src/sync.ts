@@ -1,7 +1,9 @@
 import { execSync } from "child_process";
 import fs from "fs";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import inquirer from "inquirer";
-import type { Environment, EnvVars, SyncAction, EnvDiff, SyncChoice, SyncEnvsOptions } from './types';
+import type { Environment, EnvVars, SyncAction, EnvDiff, SyncChoice, SyncEnvsOptions } from './types.js';
 
 // Configuration
 const ENV_CONFIG = {
@@ -804,7 +806,10 @@ process.on("SIGINT", () => {
 });
 
 // Only run main if this file is executed directly
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+if (process.argv[1] === __filename) {
   main().catch((error) => {
     console.error("💥 Unexpected error:", error instanceof Error ? error.message : "Unknown error");
     process.exit(1);

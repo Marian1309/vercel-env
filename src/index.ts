@@ -1,6 +1,6 @@
 // Export named modules for library usage
-export { deleteEnvs } from './delete-all';
-export { syncEnvs } from './sync';
+export { deleteEnvs } from './delete-all.js';
+export { syncEnvs } from './sync.js';
 
 // Export types for TypeScript users
 export type {
@@ -13,4 +13,4 @@ export type {
   SyncChoice,
   DeleteEnvsOptions,
   SyncEnvsOptions
-} from './types';
+} from './types.js';

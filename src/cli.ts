@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { deleteEnvs } from './delete-all';
-import { syncEnvs } from './sync';
-import type { Environment } from './types';
+import { deleteEnvs } from './delete-all.js';
+import { syncEnvs } from './sync.js';
+import type { Environment } from './types.js';
 
 const showHelp = () => {
   console.log("🚀 Vercel Environment Sync CLI");

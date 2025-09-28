@@ -56,6 +56,17 @@ vercel env ls production
 npm install -g @pidchashyi/vercel-env
 ```
 
+**✨ Global installation gives you easier commands:**
+After global installation, you can use the shorter `vercel-env` command directly:
+
+```bash
+# Easy commands (after global install)
+vercel-env --sync           # Instead of npx @pidchashyi/vercel-env --sync
+vercel-env --delete         # Instead of npx @pidchashyi/vercel-env --delete
+vercel-env --sync --dev     # Instead of npx @pidchashyi/vercel-env --sync --dev
+vercel-env --delete --prod  # Instead of npx @pidchashyi/vercel-env --delete --prod
+```
+
 ### As a library (local):
 
 ```bash
@@ -71,31 +82,33 @@ bun add @pidchashyi/vercel-env
 ### Sync environments
 
 ```bash
-# Interactive mode - choose everything
-npx @pidchashyi/vercel-env --sync
+# If installed globally (easier):
+vercel-env --sync                    # Interactive mode - choose everything
+vercel-env --sync --dev              # Sync development only (interactive)
+vercel-env --sync --prod             # Sync production only (interactive)
+vercel-env --sync --dev --auto       # Auto sync development (with confirmation)
+vercel-env --sync --auto             # Auto sync both environments
 
-# Sync development only (interactive)
-npx @pidchashyi/vercel-env --sync --dev
-
-# Sync production only (interactive)
-npx @pidchashyi/vercel-env --sync --prod
-
-# Auto sync development (with confirmation)
-npx @pidchashyi/vercel-env --sync --dev --auto
-
-# Auto sync both environments
-npx @pidchashyi/vercel-env --sync --auto
+# If installed locally (using npx):
+npx @pidchashyi/vercel-env --sync         # Interactive mode - choose everything
+npx @pidchashyi/vercel-env --sync --dev   # Sync development only (interactive)
+npx @pidchashyi/vercel-env --sync --prod  # Sync production only (interactive)
+npx @pidchashyi/vercel-env --sync --dev --auto  # Auto sync development
+npx @pidchashyi/vercel-env --sync --auto  # Auto sync both environments
 ```
 
 ### Delete environment variables
 
 ```bash
-# Interactive deletion (recommended)
-npx @pidchashyi/vercel-env --delete
+# If installed globally (easier):
+vercel-env --delete                  # Interactive deletion (recommended)
+vercel-env --delete --dev            # Delete from development
+vercel-env --delete --prod           # Delete from production
 
-# Delete from specific environments
-npx @pidchashyi/vercel-env --delete --dev
-npx @pidchashyi/vercel-env --delete --prod
+# If installed locally (using npx):
+npx @pidchashyi/vercel-env --delete       # Interactive deletion (recommended)
+npx @pidchashyi/vercel-env --delete --dev # Delete from development
+npx @pidchashyi/vercel-env --delete --prod # Delete from production
 ```
 
 ## 📚 Library Usage
@@ -143,7 +156,7 @@ bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env/src/delete-all.ts
 ```bash
 # Clone and run directly from source
 git clone <repository-url>
-cd vercel-env-sync
+cd vercel-env
 
 # Run sync module
 bun src/sync.ts

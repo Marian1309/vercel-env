@@ -1,6 +1,6 @@
 {
   "name": "@pidchashyi/vercel-env",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "A comprehensive library and CLI tool for syncing environment variables between local files and Vercel",
   "keywords": [
     "vercel",
@@ -11,18 +11,19 @@
     "deployment",
     "variables"
   ],
-  "homepage": "https://github.com/Marian1309/vercel-env-sync#readme",
+  "homepage": "https://github.com/Marian1309/vercel-env#readme",
   "bugs": {
-    "url": "https://github.com/Marian1309/vercel-env-sync/issues"
+    "url": "https://github.com/Marian1309/vercel-env/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Marian1309/vercel-env-sync.git"
+    "url": "git+https://github.com/Marian1309/vercel-env.git"
   },
   "license": "MIT",
   "author": "Marian Pidchashyi",
+  "type": "module",
   "bin": {
-    "vercel-env-sync": "./dist/cli.js"
+    "vercel-env": "./dist/cli.js"
   },
   "exports": {
     ".": {
@@ -44,6 +45,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
+    "dist",
     "src",
     "LICENSE",
     "README.md"
