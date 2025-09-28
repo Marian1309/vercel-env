@@ -2,6 +2,8 @@
 
 A comprehensive library and CLI tool for syncing environment variables between local files and Vercel. This tool provides both programmatic access through named modules (`deleteEnvs` and `syncEnvs`) and a modern, interactive CLI interface powered by @clack/prompts.
 
+<img src="./icon.png" />
+
 ## 📖 What is this?
 
 **@pidchashyi/vercel-env** solves the common problem of keeping environment variables synchronized between your local development environment and your Vercel deployments. Instead of manually copying variables back and forth, this tool provides:
