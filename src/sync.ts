@@ -789,12 +789,12 @@ const main = async () => {
   });
 
   console.log("\n📖 Usage examples:");
-  console.log("  npx @pidchashyi/vercel-env-sync --sync                    # Interactive mode - choose everything");
-  console.log("  npx @pidchashyi/vercel-env-sync --sync --dev              # Sync development only (interactive)");
-  console.log("  npx @pidchashyi/vercel-env-sync --sync --prod             # Sync production only (interactive)");
-  console.log("  npx @pidchashyi/vercel-env-sync --sync --dev --auto       # Auto sync development");
-  console.log("  npx @pidchashyi/vercel-env-sync --sync --prod --auto      # Auto sync production");
-  console.log("  npx @pidchashyi/vercel-env-sync --sync --auto             # Auto sync both environments");
+  console.log("  npx @pidchashyi/vercel-env --sync                    # Interactive mode - choose everything");
+  console.log("  npx @pidchashyi/vercel-env --sync --dev              # Sync development only (interactive)");
+  console.log("  npx @pidchashyi/vercel-env --sync --prod             # Sync production only (interactive)");
+  console.log("  npx @pidchashyi/vercel-env --sync --dev --auto       # Auto sync development");
+  console.log("  npx @pidchashyi/vercel-env --sync --prod --auto      # Auto sync production");
+  console.log("  npx @pidchashyi/vercel-env --sync --auto             # Auto sync both environments");
 };
 
 // Handle process termination gracefully

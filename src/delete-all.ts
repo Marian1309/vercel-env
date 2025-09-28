@@ -346,7 +346,7 @@ const main = async () => {
 
   if (forceDelete) {
     console.log("⚠️  --force flag detected. Use the interactive mode for safer deletion:");
-    console.log("  npx @pidchashyi/vercel-env-sync --delete");
+    console.log("  npx @pidchashyi/vercel-env --delete");
     process.exit(0);
   } else if (interactiveMode || args.length === 0) {
     await deleteEnvs();
@@ -357,7 +357,7 @@ const main = async () => {
     console.log("This script provides a safe, interactive way to delete environment variables from Vercel.");
     console.log("");
     console.log("Usage:");
-    console.log("  npx @pidchashyi/vercel-env-sync --delete    # Interactive mode (recommended)");
+    console.log("  npx @pidchashyi/vercel-env --delete    # Interactive mode (recommended)");
     console.log("");
     console.log("Features:");
     console.log("  🌍 Select specific environments (development/production)");

@@ -1,4 +1,4 @@
-# @pidchashyi/vercel-env-sync
+# @pidchashyi/vercel-env
 
 A comprehensive library and CLI tool for syncing environment variables between local files and Vercel. This tool provides both programmatic access through named modules (`deleteEnvs` and `syncEnvs`) and a convenient CLI interface.
 
@@ -53,17 +53,17 @@ vercel env ls production
 ### As a CLI tool (global):
 
 ```bash
-npm install -g @pidchashyi/vercel-env-sync
+npm install -g @pidchashyi/vercel-env
 ```
 
 ### As a library (local):
 
 ```bash
-npm install @pidchashyi/vercel-env-sync
+npm install @pidchashyi/vercel-env
 # or
-yarn add @pidchashyi/vercel-env-sync
+yarn add @pidchashyi/vercel-env
 # or
-bun add @pidchashyi/vercel-env-sync
+bun add @pidchashyi/vercel-env
 ```
 
 ## 🏃‍♂️ CLI Usage
@@ -72,30 +72,30 @@ bun add @pidchashyi/vercel-env-sync
 
 ```bash
 # Interactive mode - choose everything
-npx @pidchashyi/vercel-env-sync --sync
+npx @pidchashyi/vercel-env --sync
 
 # Sync development only (interactive)
-npx @pidchashyi/vercel-env-sync --sync --dev
+npx @pidchashyi/vercel-env --sync --dev
 
 # Sync production only (interactive)
-npx @pidchashyi/vercel-env-sync --sync --prod
+npx @pidchashyi/vercel-env --sync --prod
 
 # Auto sync development (with confirmation)
-npx @pidchashyi/vercel-env-sync --sync --dev --auto
+npx @pidchashyi/vercel-env --sync --dev --auto
 
 # Auto sync both environments
-npx @pidchashyi/vercel-env-sync --sync --auto
+npx @pidchashyi/vercel-env --sync --auto
 ```
 
 ### Delete environment variables
 
 ```bash
 # Interactive deletion (recommended)
-npx @pidchashyi/vercel-env-sync --delete
+npx @pidchashyi/vercel-env --delete
 
 # Delete from specific environments
-npx @pidchashyi/vercel-env-sync --delete --dev
-npx @pidchashyi/vercel-env-sync --delete --prod
+npx @pidchashyi/vercel-env --delete --dev
+npx @pidchashyi/vercel-env --delete --prod
 ```
 
 ## 📚 Library Usage
@@ -105,7 +105,7 @@ You can use this library in two ways:
 ### 1. Import as Library Modules
 
 ```typescript
-import { syncEnvs, deleteEnvs } from '@pidchashyi/vercel-env-sync';
+import { syncEnvs, deleteEnvs } from '@pidchashyi/vercel-env';
 
 // Interactive sync (default)
 await syncEnvs();
@@ -128,14 +128,14 @@ You can also run the individual module files directly:
 
 ```bash
 # Run sync module directly
-bun node_modules/@pidchashyi/vercel-env-sync/src/sync.ts
+bun node_modules/@pidchashyi/vercel-env/src/sync.ts
 
 # Run delete module directly  
-bun node_modules/@pidchashyi/vercel-env-sync/src/delete-all.ts
+bun node_modules/@pidchashyi/vercel-env/src/delete-all.ts
 
 # Or if installed globally
-bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env-sync/src/sync.ts
-bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env-sync/src/delete-all.ts
+bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env/src/sync.ts
+bun ~/.bun/install/global/node_modules/@pidchashyi/vercel-env/src/delete-all.ts
 ```
 
 ### 3. Local Development (if you have the source)

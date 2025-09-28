@@ -1,5 +1,5 @@
 {
-  "name": "@pidchashyi/vercel-env-sync",
+  "name": "@pidchashyi/vercel-env",
   "version": "1.0.0",
   "description": "A comprehensive library and CLI tool for syncing environment variables between local files and Vercel",
   "keywords": [
